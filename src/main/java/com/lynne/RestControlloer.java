@@ -1,30 +1,19 @@
 package com.lynne;
 
-import com.mongodb.DB;
-import com.mongodb.Mongo;
 import com.mongodb.MongoClient;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
-import org.bson.Document;
+import org.bson.*;
 import org.bson.types.ObjectId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.annotation.AnnotationConfigApplicationContext;
-import org.springframework.data.mongodb.core.MongoOperations;
-import org.springframework.data.mongodb.core.query.Criteria;
-import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
-import javax.print.Doc;
-import javax.websocket.server.PathParam;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -48,9 +37,9 @@ public class RestControlloer {
     @RequestMapping(value = "/hello", method = RequestMethod.GET)
     public ResponseEntity<String> get() {
         this.ensureDBConnection();
-        MongoCollection<Document> coll = this.db.getCollection("listings");
-        Document doc = null;
-        FindIterable<Document> itr = coll.find();
+        MongoCollection<BsonDocument> coll = this.db.getCollection("listings", BsonDocument.class);
+        BsonDocument doc = null;
+        FindIterable<BsonDocument> itr = coll.find();
         doc = itr.first();
         return new ResponseEntity<String>(doc.toJson(), HttpStatus.OK);
 
@@ -59,13 +48,13 @@ public class RestControlloer {
     @RequestMapping(value = "/", method = RequestMethod.GET)
     public ResponseEntity<String> getAllAssets() {
         this.ensureDBConnection();
-        MongoCollection<Document> coll = this.db.getCollection("listings");
-        Document root = new Document();
-        List<Document> list = new ArrayList<Document>();
-        for (Document x : coll.find()) {
+        MongoCollection<BsonDocument> coll = this.db.getCollection("listings", BsonDocument.class);
+        BsonDocument root = new BsonDocument();
+        List<BsonDocument> list = new ArrayList<BsonDocument>();
+        for (BsonDocument x : coll.find()) {
             list.add(x);
         }
-        root.append("data", list);
+        root.append("data", new BsonArray(list));
         return new ResponseEntity<String>(root.toJson(), HttpStatus.OK);
     }
 
@@ -77,17 +66,17 @@ public class RestControlloer {
             return new ResponseEntity<String>(HttpStatus.BAD_REQUEST);
         }
 
-        MongoCollection<Document> coll = this.db.getCollection("listings");
+        MongoCollection<BsonDocument> coll = this.db.getCollection("listings", BsonDocument.class);
 
         if (coll == null) {
             return new ResponseEntity<String>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
-        Document criteria = new Document();
-        criteria.append("_id", new ObjectId(id));
+        BsonDocument criteria = new BsonDocument();
+        criteria.append("_id", new BsonObjectId(new ObjectId(id)));
 
         logger.info("criteria: " + criteria.toJson());
-        Document x = coll.find(criteria).first();
+        BsonDocument x = coll.find(criteria).first();
         if (x == null) {
             return new ResponseEntity<String>(HttpStatus.NOT_FOUND);
         }
@@ -104,31 +93,31 @@ public class RestControlloer {
             return new ResponseEntity<String>(HttpStatus.BAD_REQUEST);
         }
 
-        MongoCollection<Document> coll = this.db.getCollection("listings");
+        MongoCollection<BsonDocument> coll = this.db.getCollection("listings", BsonDocument.class);
         if (coll == null) {
             return new ResponseEntity<String>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
-        Document root = new Document();
-        List<Document> list = new ArrayList<Document>();
+        BsonDocument root = new BsonDocument();
+        List<BsonDocument> list = new ArrayList<BsonDocument>();
 
-        Document regQuery = new Document();
-        regQuery.append("$regex", "^" + Pattern.quote(prefix) + ".*");
+        BsonDocument regQuery = new BsonDocument();
+        regQuery.append("$regex", new BsonString("^" + Pattern.quote(prefix) + ".*"));
 
         //TODO
         Filters.regex("isin", "^" + prefix + ".*");
 
-        Document criteria = new Document();
+        BsonDocument criteria = new BsonDocument();
         criteria.append("isin", regQuery);
 
         logger.info("criteria: " + criteria.toJson());
-        for (Document x : coll.find(criteria)) {
+        for (BsonDocument x : coll.find(criteria)) {
             list.add(x);
         }
 
         if (list.size() == 0) {
             return new ResponseEntity<String>(HttpStatus.NOT_FOUND);
         }
-        root.append("data", list);
+        root.append("data", new BsonArray(list));
         return new ResponseEntity<String>(root.toJson(), HttpStatus.OK);
 
     }
@@ -138,25 +127,25 @@ public class RestControlloer {
 
         this.ensureDBConnection();
 
-        MongoCollection<Document> coll = this.db.getCollection("listings");
+        MongoCollection<BsonDocument> coll = this.db.getCollection("listings", BsonDocument.class);
         if (coll == null) {
             return new ResponseEntity<String>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
-        Document root = new Document();
-        List<Document> list = new ArrayList<Document>();
+        BsonDocument root = new BsonDocument();
+        List<BsonDocument> list = new ArrayList<BsonDocument>();
 
-        Document group = new Document();
-        group.append("count", new Document("$sum", 1));
-        group.append("_id", "$currency");
+        BsonDocument group = new BsonDocument();
+        group.append("count", new BsonDocument("$sum", new BsonInt64(1)));
+        group.append("_id", new BsonString("$currency"));
 
-        for (Document x : coll.aggregate(Arrays.asList(new Document("$group", group),
-                new Document("$sort", new Document("count", -1))))) {
+        for (BsonDocument x : coll.aggregate(Arrays.asList(new BsonDocument("$group", group),
+                new BsonDocument("$sort", new BsonDocument("count", new BsonInt64(-1)))))) {
             list.add(x);
         }
         if (list.size() == 0) {
             return new ResponseEntity<String>(HttpStatus.NOT_FOUND);
         }
-        root.append("data", list);
+        root.append("data", new BsonArray(list));
         return new ResponseEntity<String>(root.toJson(), HttpStatus.OK);
 
     }
