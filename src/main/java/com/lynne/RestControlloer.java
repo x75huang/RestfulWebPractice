@@ -6,7 +6,10 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Sorts;
-import org.bson.*;
+import org.bson.BsonArray;
+import org.bson.BsonDocument;
+import org.bson.BsonInt64;
+import org.bson.BsonString;
 import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
 import org.slf4j.Logger;
@@ -20,13 +23,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.logging.Filter;
-import java.util.regex.Pattern;
 
 /**
  * Created by Lynne on 2016-11-15.
  */
-@CrossOrigin
 @RestController
 @RequestMapping("/asset/1")
 public class RestControlloer {
@@ -37,7 +37,7 @@ public class RestControlloer {
 
     private Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    @RequestMapping(value = "/hello", method = RequestMethod.GET)
+    @RequestMapping(value = RequestMap.HELLO, method = RequestMethod.GET)
     public ResponseEntity<String> get() {
         this.ensureDBConnection();
         MongoCollection<BsonDocument> coll = this.db.getCollection("listings", BsonDocument.class);
@@ -48,7 +48,8 @@ public class RestControlloer {
 
     }
 
-    @RequestMapping(value = "/", method = RequestMethod.GET)
+
+    @RequestMapping(value = RequestMap.GET_ALL, method = RequestMethod.GET)
     public ResponseEntity<String> getAllAssets() {
         this.ensureDBConnection();
         MongoCollection<BsonDocument> coll = this.db.getCollection("listings", BsonDocument.class);
@@ -58,7 +59,7 @@ public class RestControlloer {
         return new ResponseEntity<String>(root.toJson(), HttpStatus.OK);
     }
 
-    @RequestMapping(value = "/{id}", method = RequestMethod.GET)
+    @RequestMapping(value = RequestMap.GET_BY_ID, method = RequestMethod.GET)
     public ResponseEntity<String> getAsset(@PathVariable String id) {
         this.ensureDBConnection();
 
@@ -83,7 +84,7 @@ public class RestControlloer {
 
     }
 
-    @RequestMapping(value = "/like/isin", method = RequestMethod.GET)
+    @RequestMapping(value = RequestMap.GET_BY_ISIN_PREFIX, method = RequestMethod.GET)
     public ResponseEntity<String> getAssetByIsinPrefix(@RequestParam String prefix) {
         logger.info("get Asset By Isin prefix: " + prefix);
 
@@ -110,7 +111,7 @@ public class RestControlloer {
 
     }
 
-    @RequestMapping(value = "/currencyCount", method = RequestMethod.GET)
+    @RequestMapping(value = RequestMap.GROUP_CURRENCY_COUNT, method = RequestMethod.GET)
     public ResponseEntity<String> getAssetCurrencyCount() {
 
         this.ensureDBConnection();
@@ -143,7 +144,8 @@ public class RestControlloer {
 
     }
 
-    @RequestMapping(value = "/like/name", method = RequestMethod.GET)
+    //Use PUT or POST
+    @RequestMapping(value = RequestMap.GET_BY_NAME, method = RequestMethod.GET)
     public ResponseEntity<String> getAssetByName(@RequestParam String name) {
         logger.info("get Asset By Name: " + name);
 
